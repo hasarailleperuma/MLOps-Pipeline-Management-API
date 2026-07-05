@@ -254,10 +254,10 @@ original form on arrival.
 
 `EvaluationMetricResource` (and the other resource classes) declare
 `@Produces(MediaType.APPLICATION_JSON)` once at the class level, which becomes the default
-media type for every method inside that class — following the DRY principle. Since nearly
+media type for every method inside that class , following the DRY principle. Since nearly
 every endpoint in this API returns JSON, this avoids repeating the annotation on `getMetrics()`
 and `addMetric()` individually, and reduces the risk of forgetting it on a new method (which
-would break content negotiation). If a specific method needs to return something else — for
+would break content negotiation). If a specific method needs to return something else  for
 example, a future `GET /metrics/export` endpoint returning CSV — it can carry its own
 `@Produces("text/csv")` annotation, and JAX-RS's "most specific annotation wins" rule means
 that method-level declaration overrides the class-level default *for that method only*; every
@@ -308,7 +308,7 @@ JAX-RS uses a **most-specific-type-wins** resolution strategy. When an exception
 runtime walks up the exception's class hierarchy from its exact runtime type, looking at each
 level for a registered `ExceptionMapper<T>` where `T` matches. Because
 `LinkedWorkspaceNotFoundExceptionMapper` is registered directly for
-`LinkedWorkspaceNotFoundException`, it is found immediately and used — it is a strictly
+`LinkedWorkspaceNotFoundException`, it is found immediately and used , it is a strictly
 closer match than `GlobalExceptionMapper`, which is only registered for `Throwable`, at the
 very top of the hierarchy. The global mapper therefore only ever fires as a last resort, for
 exception types with no dedicated mapper — genuinely unexpected bugs like a
@@ -319,7 +319,7 @@ sanitised into a generic `500` rather than leaking a raw stack trace to the clie
 **Q5.5 — List two pieces of crucial HTTP metadata available from the filter contexts.**
 
 From `ContainerRequestContext` in `LoggingFilter`: (1) `getMethod()` and
-`getUriInfo().getRequestUri()` — together these show exactly which HTTP verb and full URL
+`getUriInfo().getRequestUri()` , together these show exactly which HTTP verb and full URL
 (including query parameters like `?status=DEPLOYED`) a client used, which is essential for
 reproducing a reported bug; and (2) `getHeaders()`, which exposes request headers such as
 `Content-Type` and `User-Agent`, useful for identifying which client or pipeline made a
