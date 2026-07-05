@@ -1,0 +1,635 @@
+{
+  "info": {
+    "name": "MLOps Pipeline Management API - Hasara",
+    "description": "Complete test suite for 5COSC022W Coursework (Referral). Covers all 5 parts.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/MLOpsPipelineAPI/api/v1" },
+    { "key": "createdWorkspaceId", "value": "" },
+    { "key": "createdModelId", "value": "" },
+    { "key": "createdMetricId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Part 1 - Discovery",
+      "item": [
+        {
+          "name": "GET Discovery Endpoint",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}",
+            "description": "Part 1.2 - Should return API metadata with version, contact, and resource map"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});",
+                  "pm.test('Has version field', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.property('version');",
+                  "});",
+                  "pm.test('Has resources map', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.property('resources');",
+                  "    pm.expect(body.resources).to.have.property('workspaces');",
+                  "    pm.expect(body.resources).to.have.property('models');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Part 2 - Workspace Management",
+      "item": [
+        {
+          "name": "GET All Workspaces",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/workspaces"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is an array', function () {",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});",
+                  "pm.test('Cache-Control header present', function () {",
+                  "    pm.expect(pm.response.headers.get('Cache-Control')).to.include('max-age');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Create Workspace",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/workspaces",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"WS-TEST-99\",\n  \"teamName\": \"Hasara Test Lab\",\n  \"storageQuotaGb\": 200\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Returns created workspace', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.id).to.eql('WS-TEST-99');",
+                  "    pm.expect(body.teamName).to.eql('Hasara Test Lab');",
+                  "});",
+                  "pm.collectionVariables.set('createdWorkspaceId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Single Workspace",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/workspaces/WS-TEST-99"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Returns correct workspace', function () {",
+                  "    pm.expect(pm.response.json().id).to.eql('WS-TEST-99');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "HEAD Check Workspace Exists",
+          "request": {
+            "method": "HEAD",
+            "url": "{{baseUrl}}/workspaces/WS-TEST-99",
+            "description": "Part 2 - HEAD method to check existence without downloading body"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK for existing workspace', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Body is empty (HEAD request)', function () {",
+                  "    pm.expect(pm.response.text()).to.eql('');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE Workspace (Success - Empty)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/workspaces/WS-TEST-99"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Deletion confirmed in message', function () {",
+                  "    pm.expect(pm.response.json().message).to.include('deleted');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE Workspace (409 - Has Models)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/workspaces/WS-VISION-01",
+            "description": "Should fail with 409 because WS-VISION-01 has models assigned"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 409 Conflict', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test('Error message explains constraint', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.error).to.eql('Conflict');",
+                  "    pm.expect(body.message).to.include('model');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Workspace (404 - Not Found)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/workspaces/WS-NONEXISTENT"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test('Error message present', function () {",
+                  "    pm.expect(pm.response.json()).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Part 3 - Model Operations",
+      "item": [
+        {
+          "name": "GET All Models",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/models"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Returns array of models', function () {",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Models Filtered by Status (DEPLOYED)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/models?status=DEPLOYED",
+              "query": [{ "key": "status", "value": "DEPLOYED" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('All returned models are DEPLOYED', function () {",
+                  "    const models = pm.response.json();",
+                  "    models.forEach(function(m) {",
+                  "        pm.expect(m.status).to.eql('DEPLOYED');",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Create Model (Valid Workspace)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/models",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"framework\": \"Scikit-Learn\",\n  \"status\": \"TRAINING\",\n  \"latestAccuracy\": 0.65,\n  \"workspaceId\": \"WS-VISION-01\"\n}"
+            },
+            "description": "Server should generate the ID. workspaceId must exist."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Server generated the model ID', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.id).to.be.a('string');",
+                  "    pm.expect(body.id).to.include('MOD-');",
+                  "});",
+                  "pm.test('Framework is correct', function () {",
+                  "    pm.expect(pm.response.json().framework).to.eql('Scikit-Learn');",
+                  "});",
+                  "pm.collectionVariables.set('createdModelId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Create Model (422 - Bad WorkspaceId)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/models",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"framework\": \"TensorFlow\",\n  \"status\": \"TRAINING\",\n  \"latestAccuracy\": 0.5,\n  \"workspaceId\": \"WS-DOES-NOT-EXIST\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 422 Unprocessable Entity', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test('Error body has message', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.error).to.eql('Unprocessable Entity');",
+                  "    pm.expect(body.message).to.include('Workspace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Part 4 - Evaluation Metrics (Sub-Resource)",
+      "item": [
+        {
+          "name": "POST Add Metric to Model",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/models/MOD-8832/metrics",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accuracyScore\": 0.95\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.test('Server generated metric ID (UUID)', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.id).to.be.a('string').and.have.length.greaterThan(10);",
+                  "});",
+                  "pm.test('Timestamp was set by server', function () {",
+                  "    pm.expect(pm.response.json().timestamp).to.be.greaterThan(0);",
+                  "});",
+                  "pm.collectionVariables.set('createdMetricId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET Metrics for Model",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/models/MOD-8832/metrics"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Returns array of metrics', function () {",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});",
+                  "pm.test('At least one metric in history', function () {",
+                  "    pm.expect(pm.response.json().length).to.be.greaterThan(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify Parent Model latestAccuracy Updated",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/models/MOD-8832",
+            "description": "Side effect: latestAccuracy on parent model should now be 0.95"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('latestAccuracy reflects last metric posted (0.95)', function () {",
+                  "    pm.expect(pm.response.json().latestAccuracy).to.eql(0.95);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST Metric to DEPRECATED Model (403 Forbidden)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/models/{{createdModelId}}/metrics",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accuracyScore\": 0.70\n}"
+            },
+            "description": "First we need to have a DEPRECATED model. Update the model status first if needed."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// This test works against a DEPRECATED model.",
+                  "// Make sure to run 'PATCH Set Model DEPRECATED' or manually create one first.",
+                  "// Alternatively run this against MOD-DEPR-01 if you seed one."
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// This will only be 403 if the model is DEPRECATED.",
+                  "// If model is not deprecated, it will be 201.",
+                  "pm.test('Response received', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 403]);",
+                  "});",
+                  "if (pm.response.code === 403) {",
+                  "    pm.test('403 error body correct', function () {",
+                  "        pm.expect(pm.response.json().error).to.eql('Forbidden');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Part 5 - Error Handling",
+      "item": [
+        {
+          "name": "409 - Delete Workspace With Models",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/workspaces/WS-VISION-01"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 409 Conflict', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test('JSON error body returned (no stack trace)', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.property('status');",
+                  "    pm.expect(body).to.have.property('error');",
+                  "    pm.expect(body).to.have.property('message');",
+                  "    pm.expect(body).not.to.have.property('stackTrace');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "422 - Model With Invalid Workspace",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/models",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"framework\": \"PyTorch\",\n  \"workspaceId\": \"WS-GHOST\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 422', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "pm.test('No raw stack trace in response', function () {",
+                  "    const text = pm.response.text();",
+                  "    pm.expect(text).not.to.include('at hasara.mlops');",
+                  "    pm.expect(text).not.to.include('java.lang');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "404 - Get Non-Existent Model",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/models/MOD-GHOST-999"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test('Clean JSON error (no stack trace)', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql(404);",
+                  "    pm.expect(body.error).to.eql('Not Found');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "403 - Add Metric to DEPRECATED Model (Setup: Create Deprecated Model)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/workspaces",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"WS-DEPR-LAB\",\n  \"teamName\": \"Legacy Models Lab\",\n  \"storageQuotaGb\": 50\n}"
+            },
+            "description": "Step 1 of 403 test: create a workspace to host a deprecated model"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Workspace created or already exists', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 409]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "403 - Add Metric to DEPRECATED Model (Setup: Create Deprecated Model POST)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/models",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"framework\": \"Keras\",\n  \"status\": \"DEPRECATED\",\n  \"latestAccuracy\": 0.55,\n  \"workspaceId\": \"WS-DEPR-LAB\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Deprecated model created (201)', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "pm.collectionVariables.set('deprecatedModelId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "403 - Post Metric to DEPRECATED Model",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/models/{{deprecatedModelId}}/metrics",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accuracyScore\": 0.90\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 403 Forbidden', function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test('JSON error body without stack trace', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.error).to.eql('Forbidden');",
+                  "    pm.expect(body.message).to.include('DEPRECATED');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
